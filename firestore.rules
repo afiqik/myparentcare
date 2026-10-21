@@ -1,0 +1,422 @@
+rules_version = '2';
+
+// MyParentCare – Cloud Firestore security rules (Spark / tanpa Cloud Functions).
+//
+// Firestore ialah pangkalan data pelajar & awam. Semua logik yang biasanya
+// dibuat oleh server (kapasiti program, satu pelajar satu tempat, peranan
+// admin) dikuatkuasakan di sini. Ruang kerja admin berada dalam Realtime
+// Database yang berasingan (lihat database.rules.json).
+//
+// Pemisahan data mengikut peranan:
+//   public/catalog                      -> semua pengguna log masuk (baca sahaja)
+//   users/{uid}, notifikasi, penyertaan -> pemilik sahaja (+ admin)
+//   programs/{id}, email_logs, ...      -> admin sahaja
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pemulihan backup & migrasi data lama: hanya super admin yang juga admin
+    // aktif boleh menulis terus ke mana-mana dokumen (dilog dalam audit RTDB).
+    match /{document=**} {
+      allow write: if isSuperAdmin() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Super admin ditetapkan di sini (dan dalam database.rules.json serta
+    // lib/app_config.dart). Hanya super admin boleh menukar peranan pengguna.
+    function isSuperAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['admin@myparentcare.com'];
+    }
+
+    function userDoc(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(userDoc(request.auth.uid))
+        && get(userDoc(request.auth.uid)).data.role == 'admin'
+        && get(userDoc(request.auth.uid)).data.status == 'active';
+    }
+
+    function str(value, maxLen) {
+      return value is string && value.size() <= maxLen;
+    }
+
+    function nonEmptyStr(value, maxLen) {
+      return str(value, maxLen) && value.trim().size() > 0;
+    }
+
+    function validEmail(value) {
+      return str(value, 254) && value.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
+    }
+
+    function optionalEmail(value) {
+      return value == '' || validEmail(value);
+    }
+
+    function programDoc(pid) {
+      return /databases/$(database)/documents/programs/$(pid);
+    }
+
+    // Kaunter tempat dipecah kepada beberapa shard supaya ratusan pelajar boleh
+    // mendaftar serentak tanpa bertembung pada satu dokumen.
+    function shardDoc(pid, shard) {
+      return /databases/$(database)/documents/program_seats/$(pid)/shards/$(shard);
+    }
+
+    function participantDoc(pid, uid) {
+      return /databases/$(database)/documents/programs/$(pid)/participants/$(uid);
+    }
+
+    // ------------------------------------------------------------ users/{uid}
+
+    function profileKeys() {
+      return ['fullName', 'matricNo', 'course', 'semester', 'phone',
+              'parentName', 'parentEmail', 'parentPhone', 'relationship',
+              'profileCompletePercent', 'privacyVersion', 'consentAt',
+              'unreadNotifications', 'updatedAt'];
+    }
+
+    function validProfile(d) {
+      return nonEmptyStr(d.fullName, 120)
+        && str(d.matricNo, 40)
+        && str(d.course, 120)
+        && str(d.semester, 10)
+        && str(d.phone, 20)
+        && str(d.parentName, 120)
+        && optionalEmail(d.parentEmail)
+        && str(d.parentPhone, 20)
+        && d.relationship in ['', 'Mother', 'Father', 'Guardian', 'Other']
+        && d.profileCompletePercent is int
+        && d.profileCompletePercent >= 0 && d.profileCompletePercent <= 100
+        && nonEmptyStr(d.privacyVersion, 20)
+        && d.unreadNotifications is int && d.unreadNotifications >= 0;
+    }
+
+    // Log masuk dengan Google SAHAJA (pelajar & admin).
+    function signedInWithGoogle() {
+      return request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function validNewUser(uid, d) {
+      return signedInWithGoogle()
+        && d.keys().hasOnly(['uid', 'email', 'role', 'status', 'authProvider',
+                               'createdAt'].concat(profileKeys()))
+        && d.uid == uid
+        && d.email == request.auth.token.email
+        && d.status == 'active'
+        && d.authProvider == 'google'
+        && d.createdAt == request.time
+        && d.updatedAt == request.time
+        && d.consentAt == request.time
+        && d.unreadNotifications == 0
+        && validProfile(d)
+        && (d.role == 'student' || (d.role == 'admin' && isSuperAdmin()));
+    }
+
+    match /users/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isOwner(uid) && validNewUser(uid, request.resource.data);
+
+      allow update: if
+        // Pemilik mengemas kini profil sendiri (tidak boleh tukar role/status/email).
+        (isOwner(uid)
+          && resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(profileKeys())
+          && request.resource.data.updatedAt == request.time
+          && validProfile(request.resource.data))
+        // Pemilik mengosongkan kiraan notifikasi.
+        || (isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadNotifications'])
+          && request.resource.data.unreadNotifications == 0)
+        // Super admin boleh menaikkan dirinya sendiri kali pertama (bootstrap).
+        || (isOwner(uid) && isSuperAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'updatedAt'])
+          && request.resource.data.role == 'admin'
+          && request.resource.data.status == 'active')
+        // Admin: gantung/aktifkan pelajar & tambah kiraan notifikasi.
+        || (isAdmin() && !isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'unreadNotifications', 'updatedAt'])
+          && request.resource.data.status in ['active', 'suspended']
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.unreadNotifications is int)
+        // Super admin: tukar peranan pengguna lain.
+        || (isSuperAdmin() && isAdmin() && !isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'updatedAt'])
+          && request.resource.data.role in ['student', 'admin']
+          && request.resource.data.status in ['active', 'suspended']);
+
+      // Padam akaun: pemilik sendiri (bukan admin), atau admin memadam data pelajar.
+      allow delete: if (isOwner(uid) && resource.data.role == 'student')
+        || (isAdmin() && !isOwner(uid) && resource.data.role == 'student');
+
+      // Hanya notifikasi berkaitan program/pengumuman daripada admin.
+      match /notifications/{nid} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isAdmin()
+          && request.resource.data.keys().hasOnly(['id', 'type', 'title', 'message', 'programId', 'createdAt', 'isRead'])
+          && request.resource.data.id == nid
+          && request.resource.data.type in ['update', 'cancelled', 'removed', 'announcement', 'info']
+          && nonEmptyStr(request.resource.data.title, 120)
+          && str(request.resource.data.message, 1000)
+          && str(request.resource.data.programId, 80)
+          && request.resource.data.isRead == false;
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+          && request.resource.data.isRead == true;
+        allow delete: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // --------------------------------------------------------- public/catalog
+    // Satu dokumen yang mengandungi semua program yang dipaparkan kepada pelajar,
+    // pengumuman dan konfigurasi aplikasi. Pelajar hanya perlu 1 bacaan.
+
+    match /public/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------- programs/{pid}
+    // Sumber data penuh program (termasuk draf) – admin sahaja.
+
+    function validProgram(d) {
+      return nonEmptyStr(d.title, 120)
+        && str(d.description, 4000)
+        && str(d.date, 10)
+        && str(d.time, 5)
+        && nonEmptyStr(d.location, 200)
+        && d.capacity is int && d.capacity >= 1 && d.capacity <= 5000
+        && d.category in ['Academic', 'Sports', 'Leadership', 'Career', 'Volunteer']
+        && d.status in ['draft', 'open', 'closed', 'cancelled', 'completed', 'archived']
+        && str(d.cancellationReason, 500);
+    }
+
+    // Profil pelajar mesti lengkap & aktif; emel ibu bapa mesti sama dengan profil.
+    function studentMayJoin(sid, d) {
+      let u = get(userDoc(sid)).data;
+      return u.role == 'student'
+        && u.status == 'active'
+        && nonEmptyStr(u.matricNo, 40)
+        && nonEmptyStr(u.course, 120)
+        && nonEmptyStr(u.phone, 20)
+        && nonEmptyStr(u.parentName, 120)
+        && nonEmptyStr(u.parentPhone, 20)
+        && validEmail(u.parentEmail)
+        && d.parentEmail == u.parentEmail;
+    }
+
+    match /programs/{pid} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && validProgram(request.resource.data);
+      allow delete: if isAdmin();
+
+      // ---------------------------------- programs/{pid}/participants/{sid}
+      match /participants/{sid} {
+        allow get: if isOwner(sid) || isAdmin();
+        allow list: if isAdmin();
+
+        // SERTAI PROGRAM: mesti dalam transaksi yang sama menaikkan kaunter tempat +1.
+        allow create: if isOwner(sid)
+          && request.auth.token.email_verified == true
+          && request.resource.data.keys().hasOnly([
+               'studentUid', 'studentName', 'studentEmail', 'matricNo', 'course',
+               'semester', 'studentPhone', 'parentName', 'parentEmail', 'parentPhone',
+               'relationship', 'programId', 'programTitle', 'programDate',
+               'programTime', 'programLocation', 'joinedAt', 'emailStatus', 'emailUpdatedAt',
+               'seatShard'])
+          && request.resource.data.studentUid == sid
+          && request.resource.data.programId == pid
+          && request.resource.data.studentEmail == request.auth.token.email
+          && request.resource.data.joinedAt == request.time
+          && request.resource.data.emailStatus == 'pending'
+          && studentMayJoin(sid, request.resource.data)
+          && request.resource.data.seatShard is string
+          && getAfter(shardDoc(pid, request.resource.data.seatShard)).data.count
+               == get(shardDoc(pid, request.resource.data.seatShard)).data.count + 1;
+
+        // Status emel ibu bapa: pelajar (untuk penyertaan sendiri) atau admin.
+        allow update: if (isOwner(sid) || isAdmin())
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailStatus', 'emailUpdatedAt'])
+          && request.resource.data.emailStatus in ['pending', 'sent', 'failed'];
+
+        // Admin buang peserta, atau pelajar keluar (mesti turunkan kaunter -1).
+        allow delete: if isAdmin()
+          || (isOwner(sid)
+              && getAfter(shardDoc(pid, resource.data.seatShard)).data.count
+                   == get(shardDoc(pid, resource.data.seatShard)).data.count - 1);
+      }
+    }
+
+    // Pelajar boleh melihat sejarah penyertaan sendiri melalui collection group.
+    match /{path=**}/participants/{sid} {
+      allow read: if (signedIn() && resource.data.studentUid == request.auth.uid)
+        || isAdmin();
+    }
+
+    // ------------------------------------- program_seats/{pid}/shards/{k}
+    // Setiap shard: { count, cap }. Jumlah semua `cap` = kapasiti program
+    // (diurus oleh admin). Pelajar hanya boleh menaikkan/menurunkan 1 serentak
+    // dengan mencipta/memadam dokumen penyertaan mereka dalam transaksi sama.
+
+    match /program_seats/{pid}/shards/{shard} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['count', 'cap'])
+        && request.resource.data.count == 0
+        && request.resource.data.cap is int && request.resource.data.cap >= 0;
+      allow delete: if isAdmin();
+      allow update: if request.resource.data.keys().hasOnly(['count', 'cap'])
+        && request.resource.data.count is int
+        && request.resource.data.cap is int
+        && (
+          // Admin menyusun semula kapasiti / membetulkan kiraan.
+          (isAdmin() && request.resource.data.count >= 0 && request.resource.data.cap >= 0)
+          // Pelajar sertai: +1, shard belum penuh, program dibuka, penyertaan dicipta serentak.
+          || (signedIn()
+              && request.resource.data.cap == resource.data.cap
+              && request.resource.data.count == resource.data.count + 1
+              && request.resource.data.count <= resource.data.cap
+              && get(programDoc(pid)).data.status == 'open'
+              && !exists(participantDoc(pid, request.auth.uid))
+              && existsAfter(participantDoc(pid, request.auth.uid))
+              && getAfter(participantDoc(pid, request.auth.uid)).data.seatShard == shard)
+          // Pelajar keluar (padam akaun): -1 dan penyertaan dipadam serentak.
+          || (signedIn()
+              && request.resource.data.cap == resource.data.cap
+              && request.resource.data.count == resource.data.count - 1
+              && request.resource.data.count >= 0
+              && exists(participantDoc(pid, request.auth.uid))
+              && get(participantDoc(pid, request.auth.uid)).data.seatShard == shard
+              && !existsAfter(participantDoc(pid, request.auth.uid)))
+        );
+    }
+
+    // Admin: bacaan collection group untuk papan pemuka & backup.
+    match /{path=**}/shards/{shard} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/notifications/{nid} {
+      allow read: if isAdmin();
+    }
+
+    // ------------------------------------------------------------- media/{id}
+    // Gambar disimpan terus (dimampatkan) sebagai Blob < 1MB. Video disimpan
+    // sebagai pautan (YouTube/Drive) kerana had dokumen Firestore ialah 1 MiB.
+
+    match /media/{mediaId} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             'id', 'programId', 'kind', 'bytes', 'contentType', 'sizeBytes',
+             'width', 'height', 'url', 'caption', 'uploadedBy', 'createdAt'])
+        && request.resource.data.id == mediaId
+        && request.resource.data.uploadedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.caption, 200)
+        && str(request.resource.data.programId, 80)
+        && (
+          (request.resource.data.kind == 'image'
+            && request.resource.data.bytes is bytes
+            && request.resource.data.bytes.size() <= 950000
+            && request.resource.data.contentType in ['image/jpeg', 'image/png', 'image/webp'])
+          || (request.resource.data.kind == 'video'
+            && str(request.resource.data.url, 500)
+            && request.resource.data.url.matches('^https://.+'))
+        );
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'programId']);
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------ email_logs/{id}
+    // Log penghantaran emel ibu bapa – dibaca oleh admin sahaja.
+
+    function emailLogKeys() {
+      return ['id', 'recipient', 'subject', 'body', 'status', 'errorMessage',
+              'studentName', 'studentUid', 'programId', 'programTitle', 'type',
+              'createdBy', 'createdAt', 'updatedAt', 'attempts'];
+    }
+
+    function validEmailLog(d) {
+      return d.keys().hasOnly(emailLogKeys())
+        && validEmail(d.recipient)
+        && str(d.subject, 200)
+        && str(d.body, 3000)
+        && d.status in ['queued', 'sending', 'sent', 'failed']
+        && str(d.errorMessage, 1000)
+        && str(d.studentName, 120)
+        && str(d.programId, 80)
+        && str(d.programTitle, 120)
+        && d.type in ['join', 'update', 'cancelled', 'removed', 'announcement']
+        && d.attempts is int && d.attempts >= 0;
+    }
+
+    match /email_logs/{logId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin()
+        || (signedIn() && resource.data.studentUid == request.auth.uid);
+      allow create: if validEmailLog(request.resource.data)
+        && request.resource.data.id == logId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && (
+          isAdmin()
+          // Pelajar merekod emel pengesahan penyertaan sendiri sahaja.
+          || (signedIn()
+              && request.resource.data.type == 'join'
+              && request.resource.data.studentUid == request.auth.uid
+              && request.resource.data.status in ['sent', 'failed']
+              && request.resource.data.recipient == get(userDoc(request.auth.uid)).data.parentEmail
+              && exists(participantDoc(request.resource.data.programId, request.auth.uid)))
+        );
+      allow update: if isAdmin() && validEmailLog(request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.studentUid == request.auth.uid);
+    }
+
+    // -------------------------------------------------- error_reports/{id}
+
+    match /error_reports/{reportId} {
+      allow read, delete: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['message', 'error', 'stackTrace', 'platform', 'appVersion', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.message, 500)
+        && str(request.resource.data.error, 2000)
+        && str(request.resource.data.stackTrace, 6000)
+        && str(request.resource.data.platform, 20)
+        && str(request.resource.data.appVersion, 30);
+    }
+
+    // ---------------------------------------------- account_deletions/{id}
+    // Rekod tanpa data peribadi bahawa akaun telah dipadam (untuk laporan PDPA).
+
+    match /account_deletions/{recordId} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['createdAt', 'reason', 'role'])
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.reason, 500)
+        && request.resource.data.role == 'student';
+    }
+  }
+}

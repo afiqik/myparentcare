@@ -1,0 +1,87 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "myparentcare-45eb1",
+          "appId": "1:177388431094:android:e0dcee0071201889ab6ed7",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "myparentcare-45eb1",
+          "appId": "1:177388431094:ios:b676db2552573741ab6ed7",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "myparentcare-45eb1",
+          "configurations": {
+            "android": "1:177388431094:android:e0dcee0071201889ab6ed7",
+            "ios": "1:177388431094:ios:b676db2552573741ab6ed7"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "hosting": {
+    "public": "hosting-redirect",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "redirects": [
+      {
+        "source": "/privacy",
+        "destination": "https://website-81b96.web.app/privacy",
+        "type": 301
+      },
+      {
+        "source": "/delete-account",
+        "destination": "https://website-81b96.web.app/delete-account",
+        "type": 301
+      },
+      {
+        "source": "/download",
+        "destination": "https://website-81b96.web.app/#muat-turun",
+        "type": 301
+      },
+      {
+        "source": "**",
+        "destination": "https://website-81b96.web.app/",
+        "type": 301
+      }
+    ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9199
+    },
+    "firestore": {
+      "port": 8181
+    },
+    "database": {
+      "port": 9001
+    },
+    "ui": {
+      "enabled": false
+    },
+    "hub": {
+      "port": 4401
+    },
+    "logging": {
+      "port": 4501
+    },
+    "singleProjectMode": true
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "myparentcare-firebase-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 --test-reporter=spec rules/*.test.mjs apps_script/*.test.mjs",
+    "load": "node --max-old-space-size=4096 load/join_load_test.mjs",
+    "smoke": "node smoke/production_smoke.mjs",
+    "smoke:write": "node smoke/production_smoke.mjs --write-check",
+    "email:test": "node email/send_test_email.mjs",
+    "test:apps-script": "node --test --test-concurrency=1 --test-reporter=spec apps_script/*.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0"
+  }
+}

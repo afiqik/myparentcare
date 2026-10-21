@@ -1,0 +1,71 @@
+{
+  "project_info": {
+    "project_number": "177388431094",
+    "firebase_url": "https://myparentcare-45eb1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "myparentcare-45eb1",
+    "storage_bucket": "myparentcare-45eb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177388431094:android:e0dcee0071201889ab6ed7",
+        "android_client_info": {
+          "package_name": "com.myparentcare.my_parent_care"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "177388431094-1rbmnin3afkn9f2empahjvoima3b55hm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.myparentcare.my_parent_care",
+            "certificate_hash": "2c6db827bff567d9e12e15080efd32e2df9b9825"
+          }
+        },
+        {
+          "client_id": "177388431094-smurhgtu21prchdtlvm66r73ohlonanu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.myparentcare.my_parent_care",
+            "certificate_hash": "e1c4618e1e8b566cea32dfff32d9be713662e33f"
+          }
+        },
+        {
+          "client_id": "177388431094-t58h0ebvd147hd89dbkg4c15i37abtjo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.myparentcare.my_parent_care",
+            "certificate_hash": "658b3d59abf767a6cca1b533bba0335fe431dbbd"
+          }
+        },
+        {
+          "client_id": "177388431094-pjn60qqln9mt3c156ra9c370dbdqctat.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtEIX3O5KwTe9bg2ii5MMQuv4dh5CH3Og"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "177388431094-pjn60qqln9mt3c156ra9c370dbdqctat.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "177388431094-dohlqpqj1k316gigi6q8fhuigp81kcfi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.myparentcare.myParentCare"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,131 @@
+{
+  "cases": [
+    {
+      "input": {
+        "parentEmail": "parent@example.com",
+        "studentName": "Nur Aina",
+        "program": {
+          "title": "Career Day",
+          "date": "2026-12-01",
+          "time": "09:00",
+          "location": "Main Hall"
+        }
+      },
+      "payload": {
+        "service_id": "service_aeph2e8",
+        "template_id": "template_pbwdb3p",
+        "user_id": "nIq9l3JATYQyg179z",
+        "accessToken": "fixture-private-key",
+        "template_params": {
+          "to_email": "parent@example.com",
+          "subject": "MyParentCare: Penyertaan Nur Aina disahkan",
+          "message": "Salam sejahtera,\n\nNur Aina telah menyertai program berikut:\n\nProgram: Career Day\nTarikh: 2026-12-01\nMasa: 09:00\nLokasi: Main Hall\nStatus: Disahkan\n\nIni ialah notifikasi automatik daripada MyParentCare. Jika anda tidak mengenali pelajar ini, sila abaikan emel ini.",
+          "student_name": "Nur Aina",
+          "program_title": "Career Day",
+          "program_date": "2026-12-01",
+          "program_time": "09:00",
+          "program_location": "Main Hall",
+          "reason": "",
+          "type": "join"
+        }
+      }
+    },
+    {
+      "input": {
+        "parentEmail": "ibu.bapa@gmail.com",
+        "studentName": "Siti Nur’Aisyah binti Ahmad",
+        "program": {
+          "title": "Hari Kerjaya & Keusahawanan \"2026\"",
+          "date": "2026-11-15",
+          "time": "8:30 pagi – 1:00 petang",
+          "location": "Dewan Utama, Aras 2\nBlok B"
+        }
+      },
+      "payload": {
+        "service_id": "service_aeph2e8",
+        "template_id": "template_pbwdb3p",
+        "user_id": "nIq9l3JATYQyg179z",
+        "accessToken": "fixture-private-key",
+        "template_params": {
+          "to_email": "ibu.bapa@gmail.com",
+          "subject": "MyParentCare: Penyertaan Siti Nur’Aisyah binti Ahmad disahkan",
+          "message": "Salam sejahtera,\n\nSiti Nur’Aisyah binti Ahmad telah menyertai program berikut:\n\nProgram: Hari Kerjaya & Keusahawanan \"2026\"\nTarikh: 2026-11-15\nMasa: 8:30 pagi – 1:00 petang\nLokasi: Dewan Utama, Aras 2\nBlok B\nStatus: Disahkan\n\nIni ialah notifikasi automatik daripada MyParentCare. Jika anda tidak mengenali pelajar ini, sila abaikan emel ini.",
+          "student_name": "Siti Nur’Aisyah binti Ahmad",
+          "program_title": "Hari Kerjaya & Keusahawanan \"2026\"",
+          "program_date": "2026-11-15",
+          "program_time": "8:30 pagi – 1:00 petang",
+          "program_location": "Dewan Utama, Aras 2\nBlok B",
+          "reason": "",
+          "type": "join"
+        }
+      }
+    },
+    {
+      "input": {
+        "parentEmail": "long@example.com",
+        "studentName": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "program": {
+          "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+          "date": "",
+          "time": "",
+          "location": ""
+        }
+      },
+      "payload": {
+        "service_id": "service_aeph2e8",
+        "template_id": "template_pbwdb3p",
+        "user_id": "nIq9l3JATYQyg179z",
+        "accessToken": "fixture-private-key",
+        "template_params": {
+          "to_email": "long@example.com",
+          "subject": "MyParentCare: Penyertaan AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA…",
+          "message": "Salam sejahtera,\n\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA telah menyertai program berikut:\n\nProgram: TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\nTarikh: \nMasa: \nLokasi: \nStatus: Disahkan\n\nIni ialah notifikasi automatik daripada MyParentCare. Jika anda tidak mengenali pelajar ini, sila abaikan emel ini.",
+          "student_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "program_title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+          "program_date": "",
+          "program_time": "",
+          "program_location": "",
+          "reason": "",
+          "type": "join"
+        }
+      }
+    }
+  ],
+  "errors": [
+    {
+      "status": 400,
+      "body": "The template ID is invalid",
+      "message": "EmailJS menolak permintaan (templat/ID salah): The template ID is invalid"
+    },
+    {
+      "status": 403,
+      "body": "API access in strict mode, but no Private Key was provided",
+      "message": "EmailJS memerlukan private key (strict mode). Tampal private key di Admin tools → Email settings: API access in strict mode, but no Private Key was provided"
+    },
+    {
+      "status": 403,
+      "body": "API calls are disabled for non-browser applications",
+      "message": "EmailJS menyekat permintaan. Aktifkan \"API for non-browser applications\" atau semak Allowed origins: API calls are disabled for non-browser applications"
+    },
+    {
+      "status": 412,
+      "body": "Gmail_API: Invalid grant",
+      "message": "Perkhidmatan emel EmailJS perlu disambung semula: Gmail_API: Invalid grant"
+    },
+    {
+      "status": 426,
+      "body": "Account quota exceeded",
+      "message": "Kuota EmailJS telah habis. Naik taraf pelan EmailJS: Account quota exceeded"
+    },
+    {
+      "status": 429,
+      "body": "Too many requests",
+      "message": "Terlalu banyak permintaan. Cuba semula sebentar lagi."
+    },
+    {
+      "status": 500,
+      "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "message": "EmailJS ralat 500: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…"
+    }
+  ]
+}
